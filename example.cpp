@@ -21,41 +21,13 @@ enum
     ITERATION = 2048,
 };
 
-std::string simplePBKDF2(const char *pwd)
+std::set<std::vector<char>> getCombinations(std::string dict, int sizeN)
 {
-    size_t i;
-    unsigned char *out;
-    unsigned char salt_value[] = {'S', 'a', 'l', 't', 'e', 't', ' ',
-                                  't', 'i', 'l', ' ', 'O', 'l', 'a'};
-    std::string str;
 
-    out = (unsigned char *)malloc(sizeof(unsigned char) * KEY_LEN);
-
-    if (PKCS5_PBKDF2_HMAC_SHA1(pwd, -1, salt_value, sizeof(salt_value), ITERATION, KEY_LEN, out) != 0)
-    {
-        std::ostringstream oss;
-        for (i = 0; i < KEY_LEN; i++)
-        {
-            oss << std::hex << std::setw(2) << std::setfill('0') << +out[i];
-        }
-        str = oss.str();
-    }
-    else
-    {
-        fprintf(stderr, "PKCS5_PBKDF2_HMAC_SHA1 failed\n");
-    }
-
-    free(out);
-    return str;
-}
-std::set<std::vector<char>> getCombinations(std::vector<char> &arr, int sizeN)
-{
+    std::vector<char> arr(dict.begin(), dict.end());
     std::string stringformat(arr.begin(), arr.end());
-
     std::sort(arr.begin(), arr.end());
-
     std::set<std::vector<char>> result;
-
     do
     {
         result.emplace(arr.begin(), arr.begin() + sizeN);
@@ -64,27 +36,48 @@ std::set<std::vector<char>> getCombinations(std::vector<char> &arr, int sizeN)
     return result;
 }
 
-std::string testAllCombinations(std::string dict)
+std::string hexChars(unsigned char *chars)
 {
-    std::vector<char> arr(dict.begin(), dict.end());
-    std::string foundpass = "No combination of " + dict + " matched.";
-    bool found = false;
-    int i = 0;
-    while (!found && i < dict.length())
+    std::ostringstream oss;
+    for (int i = 0; i < KEY_LEN; i++)
     {
-        i++;
-        std::cout << "\nTrying all combinations of: '" + dict + "', of length: " + std::to_string(i);
-        std::set<std::vector<char>> combinations = getCombinations(arr, i);
-        std::set<std::vector<char>>::iterator it = combinations.begin();
-        while (!found && it != combinations.end())
+        oss << std::hex << std::setw(2) << std::setfill('0') << +chars[i];
+    }
+    return oss.str();
+}
+
+std::string simplePBKDF2(std::string password)
+{
+    unsigned char salt[] = {'S', 'a', 'l', 't', 'e', 't', ' ', 't', 'i', 'l', ' ', 'O', 'l', 'a'};
+    char *pwd;
+    pwd = &password[0];
+    unsigned char *out;
+    out = (unsigned char *)malloc(sizeof(unsigned char) * KEY_LEN);
+    PKCS5_PBKDF2_HMAC_SHA1(pwd, -1, salt, sizeof(salt), ITERATION, KEY_LEN, out);
+    std::string result = hexChars(out);
+    free(out);
+    return result;
+}
+
+std::string bruteForce(std::string dict)
+{
+    int cobsize = 0;
+    bool found = false;
+    std::string foundpass = "No password was found";
+    while (!found && cobsize < dict.size())
+    {
+        cobsize++;
+        std::cout << "Trying all " << cobsize << "letter combinations of '" + dict + "'" << std::endl;
+        std::set<std::vector<char>> cob = getCombinations(dict, cobsize);
+        std::set<std::vector<char>>::iterator it = cob.begin();
+        while (!found && it != cob.end())
         {
             std::vector<char> chararr = *it;
-            std::string hex = simplePBKDF2(reinterpret_cast<const char *>(chararr.data()));
-            if (hex == FASIT)
+            std::string currentPass(chararr.begin(), chararr.end());
+            if (FASIT == simplePBKDF2(currentPass))
             {
                 found = true;
-                std::string pass(chararr.begin(), chararr.end());
-                foundpass = pass;
+                foundpass = currentPass;
             }
             it++;
         }
@@ -94,24 +87,9 @@ std::string testAllCombinations(std::string dict)
 
 int main()
 {
-    std::string dict = "OLAola123";
-    std::string result = testAllCombinations(dict);
-    std::cout << "\nWith all possible combinations of: '" + dict + "', the result was:\n" + result + "\n";
-    return 0;
+    std::string dict = "Asfg aQwE";
+    std::string bruteResult = bruteForce(dict);
+
+    std::cout << "\nResult of brute force attack with all combinations of '" + dict + "': "
+              << "\n" + bruteResult << std::endl;
 }
-/*
-    int main()
-{
-    std::string fas = "6af3f842e3ad0018f3a9b95c50b39b9c0b9006f7";
-    const char pass[] = "pass";
-    std::string result = simplePBKDF2(pass);
-    if (result == fas)
-    {
-        std::cout << "SUCCESS, they matched!\n";
-    }
-    else
-    {
-        std::cout << "FAIL, they did not match..\n";
-    }
-}
-*/
