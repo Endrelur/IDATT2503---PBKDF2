@@ -8,9 +8,9 @@ const options = {
 }
 function authorize(body) {
     const users = {
-        "test": {
-            hash: "37570e0ede59d6929ba55a120b4c665e4d9faed5",
-            salt: "746573742d73616c74"
+        Haavlek: {
+            hash: "1cc126dbfd06311783291a0ed78284cf498546d1",
+            salt: "salt123"
         }
     }
     const options = {
@@ -18,32 +18,29 @@ function authorize(body) {
         keysize: 20,
         encoder: 'sha1'
     }
-    var username = JSON.stringify(body.username)
+
+    var user = users[body.client_username]
     var client_hash = JSON.stringify(body.client_hash)
-    console.log(username)
-    serv_hash = crypto.pbkdf2Sync(client_hash, "746573742d73616c74", options.iterations, options.keysize, options.encoder).toString('hex')
-    return Promise.resolve(serv_hash === client_hash)
+    
+    serv_hash = crypto.pbkdf2Sync(client_hash, user.salt, options.iterations, options.keysize, options.encoder).toString('hex')
+    
+    console.log("Server hash: " + serv_hash)
+    console.log("User hash: " + user.hash + "\n")
+    
+    if(serv_hash === user.hash) {
+        return true;
+   
+    }else {
+        return false;
+    }
 }
 
 var http = require('http');
 
-
 var server = http.createServer().listen(3000);
 
 server.on('request', function (req, res) {
-    if (req.method == 'POST') {
-        var body = '';
-        req.on('data', function (data) {
-            body += data;
-        });
 
-        req.on('end', function () {
-            var post = JSON.parse(body)
-            console.log(post);
-            res.writeHead(200, { 'Content-Type': 'text/plain' });
-            res.end('Hello World\n');
-        });
-    }
     if (req.method == 'GET') {
 
         var header = 200
@@ -51,17 +48,20 @@ server.on('request', function (req, res) {
 
         req.on('data', function (data) {
             var body = JSON.parse(data);
+            
             if (body.token != null) {
 
             } else if (body.token == null && body.client_hash != null) {
-                console.log("trying to autorize " + body.username)
+                console.log("Trying to autorize account: " + body.client_username + "\n")
+                
                 if (authorize(body)) {
-                    console.log("Autorized " + body.username)
-                    responsebody = "SUCCESSTOKEN"
+                    console.log("Autorized account: " + body.client_username)
+                    responsebody = "Your account has been authorized!"
+                
                 } else {
-                    console.log("did not autorize" + body.username)
+                    console.log("Unable to authorize account: " + body.client_username)
                     header = 401;
-                    responsebody = "UNAUTORIZED"
+                    responsebody = "Authorization denied."
                 }
             }
 

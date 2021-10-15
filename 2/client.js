@@ -2,19 +2,19 @@ var http = require('http');
 const crypto = require('crypto')
 
 
-const settings = {
+const param = {
     iterations: 2040,
-    keysize: 20,
-    encoder: 'sha1'
+    keyLen: 20,
+    digest: 'sha1'
 }
-var password = "pass"
-var username = "test"
-const client_salt = 'test-salt';
-const client_hash = crypto.pbkdf2Sync(password, client_salt, settings.iterations, settings.keysize, settings.encoder).toString('hex')
+var client_password = "password"
+var client_username = "Haavlek"
+var client_salt = 'salt123' + client_username;
+const client_hash = crypto.pbkdf2Sync(client_password, client_salt, param.iterations, param.keyLen, param.digest).toString('hex')
 
 
 var postData = JSON.stringify({
-    username,
+    client_username,
     client_hash,
 });
 
