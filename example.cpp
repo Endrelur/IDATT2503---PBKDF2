@@ -87,7 +87,7 @@ std::string bruteForce(std::string dict)
 
 int main()
 {
-    std::string dict = "Asfg aQwE";
+    std::string dict = "QWEqweASl";
     std::string bruteResult = bruteForce(dict);
 
     std::cout << "\nResult of brute force attack with all combinations of '" + dict + "': "
